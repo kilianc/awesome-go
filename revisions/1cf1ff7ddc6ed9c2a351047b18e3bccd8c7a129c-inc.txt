@@ -1,0 +1,11 @@
+/__w/awesome-go/awesome-go/main.go:58:	main			0.0%
+/__w/awesome-go/awesome-go/main.go:64:	buildStaticSite		0.0%
+/__w/awesome-go/awesome-go/main.go:112:	dropCreateDir		0.0%
+/__w/awesome-go/awesome-go/main.go:124:	mkdirAll		62.5%
+/__w/awesome-go/awesome-go/main.go:144:	renderCategories	0.0%
+/__w/awesome-go/awesome-go/main.go:182:	renderSitemap		0.0%
+/__w/awesome-go/awesome-go/main.go:197:	extractCategories	0.0%
+/__w/awesome-go/awesome-go/main.go:239:	extractCategory		0.0%
+/__w/awesome-go/awesome-go/main.go:287:	rewriteLinksInIndex	0.0%
+/__w/awesome-go/awesome-go/main.go:336:	renderIndex		68.8%
+total:					(statements)		11.2%

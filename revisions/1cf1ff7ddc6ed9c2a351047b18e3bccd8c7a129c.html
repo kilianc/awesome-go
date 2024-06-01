@@ -1,0 +1,400 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+		<meta http-equiv="Pragma" content="no-cache" />
+		<meta http-equiv="Expires" content="0" />
+		<title>awesome-go: Go Coverage Report</title>
+		<script src="../index.js?ad79d67a7b27030a910cdcdaaaf1e441"></script>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">/__w/awesome-go/awesome-go/main.go (11.2%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">// Package main contains code for generate static site.
+package main
+
+import (
+        "bytes"
+        "embed"
+        "errors"
+        "fmt"
+        template2 "html/template"
+        "net/url"
+        "os"
+        "path/filepath"
+        "text/template"
+
+        "github.com/avelino/awesome-go/pkg/markdown"
+        cp "github.com/otiai10/copy"
+
+        "github.com/PuerkitoBio/goquery"
+        "github.com/avelino/awesome-go/pkg/slug"
+)
+
+// Link contains info about awesome url
+type Link struct {
+        Title       string
+        URL         string
+        Description string
+}
+
+// Category describe link category
+type Category struct {
+        Title       string
+        Slug        string
+        Description string
+        Links       []Link
+}
+
+// Source files
+const readmePath = "README.md"
+
+// This files should be copied 'as is' to outDir directory
+var staticFiles = []string{
+        "tmpl/assets",
+        "tmpl/robots.txt",
+}
+
+// Templates
+//go:embed tmpl/*.tmpl.html tmpl/*.tmpl.xml
+var tplFs embed.FS
+
+var tpl = template.Must(template.ParseFS(tplFs, "tmpl/*.tmpl.html", "tmpl/*.tmpl.xml"))
+
+// Output files
+const outDir = "out/" // NOTE: trailing slash is required
+
+var outIndexFile = filepath.Join(outDir, "index.html")
+var outSitemapFile = filepath.Join(outDir, "sitemap.xml")
+
+func main() <span class="cov0" title="0">{
+        if err := buildStaticSite(); err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+}
+
+func buildStaticSite() error <span class="cov0" title="0">{
+        if err := dropCreateDir(outDir); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("drop-create out dir: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if err := renderIndex(readmePath, outIndexFile); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("convert markdown to html: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">input, err := os.ReadFile(outIndexFile)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("read converted html: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">doc, err := goquery.NewDocumentFromReader(bytes.NewReader(input))
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("create goquery instance: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">categories, err := extractCategories(doc)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("extract categories: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if err := renderCategories(categories); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("render categories: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if err := rewriteLinksInIndex(doc, categories); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("rewrite links in index: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if err := renderSitemap(categories); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("render sitemap: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">for _, srcFilename := range staticFiles </span><span class="cov0" title="0">{
+                dstFilename := filepath.Join(outDir, filepath.Base(srcFilename))
+                fmt.Printf("Copy static file: %s -&gt; %s\n", srcFilename, dstFilename)
+                if err := cp.Copy(srcFilename, dstFilename); err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("copy static file `%s` to `%s`: %w", srcFilename, dstFilename, err)
+                }</span>
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// dropCreateDir drop and create output directory
+func dropCreateDir(dir string) error <span class="cov0" title="0">{
+        if err := os.RemoveAll(dir); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("remove dir: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if err := mkdirAll(dir); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("create dir: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func mkdirAll(path string) error <span class="cov8" title="1">{
+        _, err := os.Stat(path)
+        // directory is exists
+        if err == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        // unexpected error
+        <span class="cov8" title="1">if !os.IsNotExist(err) </span><span class="cov0" title="0">{
+                return fmt.Errorf("unexpected result of dir stat: %w", err)
+        }</span>
+
+        // directory is not exists
+        <span class="cov8" title="1">if err := os.MkdirAll(path, 0755); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("midirAll: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+func renderCategories(categories map[string]Category) error <span class="cov0" title="0">{
+        for _, category := range categories </span><span class="cov0" title="0">{
+                categoryDir := filepath.Join(outDir, category.Slug)
+                if err := mkdirAll(categoryDir); err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("create category dir `%s`: %w", categoryDir, err)
+                }</span>
+
+                // FIXME: embed templates
+                <span class="cov0" title="0">categoryIndexFilename := filepath.Join(categoryDir, "index.html")
+                fmt.Printf("Write category Index file: %s\n", categoryIndexFilename)
+
+                buf := bytes.NewBuffer(nil)
+                if err := tpl.Lookup("category-index.tmpl.html").Execute(buf, category); err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("render category `%s`: %w", categoryDir, err)
+                }</span>
+
+                // Sanitize HTML. This is not necessary, but allows to have content
+                // of all html files in same style.
+                <span class="cov0" title="0">{
+                        doc, err := goquery.NewDocumentFromReader(buf)
+                        if err != nil </span><span class="cov0" title="0">{
+                                return fmt.Errorf("create goquery instance for `%s`: %w", categoryDir, err)
+                        }</span>
+
+                        <span class="cov0" title="0">html, err := doc.Html()
+                        if err != nil </span><span class="cov0" title="0">{
+                                return fmt.Errorf("render goquery html for `%s`: %w", categoryDir, err)
+                        }</span>
+
+                        <span class="cov0" title="0">if err := os.WriteFile(categoryIndexFilename, []byte(html), 0644); err != nil </span><span class="cov0" title="0">{
+                                return fmt.Errorf("write category file `%s`: %w", categoryDir, err)
+                        }</span>
+                }
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func renderSitemap(categories map[string]Category) error <span class="cov0" title="0">{
+        f, err := os.Create(outSitemapFile)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("create sitemap file `%s`: %w", outSitemapFile, err)
+        }</span>
+
+        <span class="cov0" title="0">fmt.Printf("Render Sitemap to: %s\n", outSitemapFile)
+
+        if err := tpl.Lookup("sitemap.tmpl.xml").Execute(f, categories); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("render sitemap: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func extractCategories(doc *goquery.Document) (map[string]Category, error) <span class="cov0" title="0">{
+        categories := make(map[string]Category)
+        var rootErr error
+
+        doc.
+                Find("body #contents").
+                NextFiltered("ul").
+                Find("ul").
+                EachWithBreak(func(_ int, selUl *goquery.Selection) bool </span><span class="cov0" title="0">{
+                        if rootErr != nil </span><span class="cov0" title="0">{
+                                return false
+                        }</span>
+
+                        <span class="cov0" title="0">selUl.
+                                Find("li a").
+                                EachWithBreak(func(_ int, s *goquery.Selection) bool </span><span class="cov0" title="0">{
+                                        selector, exists := s.Attr("href")
+                                        if !exists </span><span class="cov0" title="0">{
+                                                return true
+                                        }</span>
+
+                                        <span class="cov0" title="0">category, err := extractCategory(doc, selector)
+                                        if err != nil </span><span class="cov0" title="0">{
+                                                rootErr = fmt.Errorf("extract category: %w", err)
+                                                return false
+                                        }</span>
+
+                                        <span class="cov0" title="0">categories[selector] = *category
+
+                                        return true</span>
+                                })
+
+                        <span class="cov0" title="0">return true</span>
+                })
+
+        <span class="cov0" title="0">if rootErr != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("extract categories: %w", rootErr)
+        }</span>
+
+        <span class="cov0" title="0">return categories, nil</span>
+}
+
+func extractCategory(doc *goquery.Document, selector string) (*Category, error) <span class="cov0" title="0">{
+        var category Category
+        var err error
+
+        doc.Find(selector).EachWithBreak(func(_ int, selCatHeader *goquery.Selection) bool </span><span class="cov0" title="0">{
+                selDescr := selCatHeader.NextFiltered("p")
+                // FIXME: bug. this would select links from all neighboring
+                // sub-categories until the next category. To prevent this we should
+                // find only first ul
+                ul := selCatHeader.NextFilteredUntil("ul", "h2")
+
+                var links []Link
+                ul.Find("li").Each(func(_ int, selLi *goquery.Selection) </span><span class="cov0" title="0">{
+                        selLink := selLi.Find("a")
+                        url, _ := selLink.Attr("href")
+                        link := Link{
+                                Title: selLink.Text(),
+                                // FIXME(kazhuravlev): Title contains only title but
+                                //         description contains Title + description
+                                Description: selLi.Text(),
+                                URL:         url,
+                        }
+                        links = append(links, link)
+                }</span>)
+
+                // FIXME: In this case we would have an empty category in main index.html with link to 404 page.
+                <span class="cov0" title="0">if len(links) == 0 </span><span class="cov0" title="0">{
+                        err = errors.New("category does not contain links")
+                        return false
+                }</span>
+
+                <span class="cov0" title="0">category = Category{
+                        Slug:        slug.Generate(selCatHeader.Text()),
+                        Title:       selCatHeader.Text(),
+                        Description: selDescr.Text(),
+                        Links:       links,
+                }
+
+                return true</span>
+        })
+
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("build a category: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return &amp;category, nil</span>
+}
+
+func rewriteLinksInIndex(doc *goquery.Document, categories map[string]Category) error <span class="cov0" title="0">{
+        var iterErr error
+        doc.
+                Find("body #content ul li ul li a").
+                EachWithBreak(func(_ int, s *goquery.Selection) bool </span><span class="cov0" title="0">{
+                        href, hrefExists := s.Attr("href")
+                        if !hrefExists </span><span class="cov0" title="0">{
+                                // FIXME: looks like is an error. Tag `a` in our case always
+                                //             should have `href` attr.
+                                return true
+                        }</span>
+
+                        // do not replace links if no page has been created for it
+                        <span class="cov0" title="0">_, catExists := categories[href]
+                        if !catExists </span><span class="cov0" title="0">{
+                                return true
+                        }</span>
+
+                        <span class="cov0" title="0">linkURL, err := url.Parse(href)
+                        if err != nil </span><span class="cov0" title="0">{
+                                iterErr = err
+                                return false
+                        }</span>
+
+                        <span class="cov0" title="0">if linkURL.Fragment != "" &amp;&amp; linkURL.Fragment != "contents" </span><span class="cov0" title="0">{
+                                s.SetAttr("href", linkURL.Fragment)
+                        }</span>
+
+                        <span class="cov0" title="0">return true</span>
+                })
+
+        <span class="cov0" title="0">if iterErr != nil </span><span class="cov0" title="0">{
+                return iterErr
+        }</span>
+
+        <span class="cov0" title="0">fmt.Printf("Rewrite links in Index file: %s\n", outIndexFile)
+        resultHTML, err := doc.Html()
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("render html: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if err := os.WriteFile(outIndexFile, []byte(resultHTML), 0644); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("rewrite index file: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// renderIndex generate site html (index.html) from markdown file
+func renderIndex(srcFilename, outFilename string) error <span class="cov8" title="1">{
+        input, err := os.ReadFile(srcFilename)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">body, err := markdown.ToHTML(input)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">f, err := os.Create(outFilename)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">fmt.Printf("Write Index file: %s\n", outIndexFile)
+        data := map[string]interface{}{
+                "Body": template2.HTML(body),
+        }
+        if err := tpl.Lookup("index.tmpl.html").Execute(f, data); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">if err := f.Close(); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("close index file: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+</html>
